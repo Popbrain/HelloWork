@@ -1,6 +1,7 @@
-[![license](https://img.shields.io/badge/license-Apache2.0-green.svg?style=flat)](https://github.com/popbrain/hellowork)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.popbrain/hellowork/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.popbrain/hellowork) 
 [![license](https://img.shields.io/badge/Java-1.8-brightgreen.svg?style=flat)](https://github.com/popbrain/hellowork)
 [![license](https://img.shields.io/badge/Kotlin-1.3.61-brightgreen.svg?style=flat)](https://github.com/popbrain/hellowork)
+[![license](https://img.shields.io/badge/license-Apache2.0-green.svg?style=flat)](https://github.com/popbrain/hellowork)
 
 # Hello Work
 
@@ -16,9 +17,21 @@ It can use by the definition of some annotations and builder patterns.
 
 ### Download
 
+Download a Jar using Gradle :
+
+```gradle
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.github.popbrain:hellowork:0.1.0'
+}
 ```
-Coming soon
-```
+
+Or download [the latest version Jar](https://search.maven.org/remote_content?g=com.github.popbrain&a=hellowork&v=LATEST) from maven central.
+
+Or download a jar from the [release page](https://github.com/Popbrain/HelloWork/releases).
 
 ### License
 
