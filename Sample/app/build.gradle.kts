@@ -17,9 +17,8 @@ project.sourceSets {
 }
 
 dependencies {
+    implementation(fileTree(mapOf("dir" to "libs", "include" to arrayOf("*.jar"))))
     implementation(kotlin("stdlib-jdk8"))
-    implementation(project(":Sample:sdkA"))
-    implementation(project(":Sample:sdkB"))
 }
 
 configure<JavaPluginConvention> {

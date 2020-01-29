@@ -9,8 +9,11 @@
 HelloWork is a library for a library. Perhaps many will be used this by SDK developers. (BTW, "HelloWork" is Public Employment Security Offices in Japanese.)<br>
 This is for Java and Android what can call modules from a module without the reflection implementation.
 
-A base module is parent and another modules are child module if a base module calls another modules.
-It use to extend the function of the base module by child modules. Base module is employer, child modules are the worker(employee).<br>
+A base module is parent and another modules are child module if calls another modules from a base module.
+It use to extend the function of the base module by child modules. The application that introduces the base module can use the extended functions of the base module by adding child modules to the dependencies as needed.
+In that case, modules do not depend on each other by using HelloWork.
+
+Base module is employer, child modules are the worker(employee).<br>
 HelloWork finds a worker that matches employer's job.
 
 It can use by the definition of some annotations and builder patterns.
@@ -32,6 +35,10 @@ dependencies {
 Or download [the latest version Jar](https://search.maven.org/remote_content?g=com.github.popbrain&a=hellowork&v=LATEST) from maven central.
 
 Or download a jar from the [release page](https://github.com/Popbrain/HelloWork/releases).
+
+### Implementation
+
+Please see [the details](./doc/implementation).
 
 ### License
 
