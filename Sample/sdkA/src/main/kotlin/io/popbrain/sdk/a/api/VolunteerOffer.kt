@@ -9,7 +9,7 @@ import io.popbrain.hellowork.annotation.employer.JobOffer
  * - Annotation @HelloWork's args are the search target packages or classes.
  * - Job definition class must be implement a Job interface.
  */
-@HelloWork("io.popbrain.sdk.b")
+@HelloWork("io.popbrain.sdk")
 interface VolunteerOffer : Job {
 
     /**

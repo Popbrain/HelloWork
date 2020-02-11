@@ -27,6 +27,8 @@ sealed class Status {
 
         object FINDERS_TROUBLE : Error()
 
+        object WORKERS_NOT_FOUND : Error()
+
         object FATAL : Error()
 
         object OTHER : Error()

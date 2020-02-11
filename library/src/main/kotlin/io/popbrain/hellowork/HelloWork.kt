@@ -40,7 +40,7 @@ class HelloWork private constructor(builder: Dispatcher) {
 
     init {
         this.frontDeskAdapterFactories = builder.frontDeskAdapterFactories.toTypedArray()
-        this.callbackExecutor = builder.callbackExecutor!!
+        this.callbackExecutor = builder.callbackExecutor
         this.executorService = builder.executorService
     }
 
@@ -119,8 +119,9 @@ class HelloWork private constructor(builder: Dispatcher) {
         var executorService: ExecutorService? = null
 
         /**
+         * Sets an Executor
          *
-         * @param executor
+         * @param executor Executor
          */
         fun callbackExecutor(executor: Executor): Dispatcher {
             this.callbackExecutor = executor
@@ -128,8 +129,9 @@ class HelloWork private constructor(builder: Dispatcher) {
         }
 
         /**
+         * Adds an AdapterFactory
          *
-         * @param adapterFactory
+         * @param adapterFactory FrontDeskAdapter.Factory
          */
         fun addFrontDeskAdapterFactory(adapterFactory: FrontDeskAdapter.Factory): Dispatcher {
             this.frontDeskAdapterFactories.add(adapterFactory)
@@ -137,6 +139,7 @@ class HelloWork private constructor(builder: Dispatcher) {
         }
 
         /**
+         * Adds an ExecutorService.
          * To use your thread pool, if you have already ExecutorService.
          *
          * @param executorService @nullable
@@ -147,7 +150,7 @@ class HelloWork private constructor(builder: Dispatcher) {
         }
 
         /**
-         * Execute build.
+         * Execute the build
          *
          * @return {@link HelloWork}
          */

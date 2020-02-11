@@ -116,7 +116,7 @@ fun Type.isWildcard(): Boolean = this is WildcardType
 
 inline fun <reified T> Method.isDeclaringClass(): Boolean = declaringClass == T::class.java
 
-fun Any.checkNotNull(mes: String? = ""): Any {
+fun Any?.checkNotNull(mes: String? = ""): Any {
     if (this != null) return this
     throw NullPointerException(mes)
 }

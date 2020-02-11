@@ -29,7 +29,7 @@ class CachePool private constructor() {
     }
     fun <R> get(key: Any): R? {
         try {
-            val result =  this.pool.get(key) as R
+            val result =  this.pool.get(key) as R?
             if (result != null) return result
             return synchroGet<R>(key)
         } catch (e: Exception) {
@@ -49,7 +49,7 @@ class CachePool private constructor() {
 
     private fun <R> synchroGet(key: Any): R? {
         synchronized(this.pool) {
-            return this.pool.get(key) as R
+            return this.pool.get(key) as R?
         }
     }
 }

@@ -42,7 +42,7 @@ class FrontDeskAdapterFactory(private val executor: Executor): FrontDeskAdapter.
                 override fun onResponse(call: FrontDesk<R>?, res: Effort<R>) {
                     this@FrontDeskCaller.executor.execute {
                         if (isCancel) {
-                            callback.onFailure(res, IOException("Canceled"))
+                            callback.onFailure(res)
                         } else {
                             callback.onResponse(this@FrontDeskCaller, res)
                         }
@@ -51,10 +51,7 @@ class FrontDeskAdapterFactory(private val executor: Executor): FrontDeskAdapter.
 
                 override fun onFailure(res: Effort<R>, t: Throwable?) {
                     this@FrontDeskCaller.executor.execute {
-                        callback.onFailure(Effort.Builder<R>().apply {
-                            t?.message?.let { setMessage(it) }
-                            t?.let { setException(it) }
-                        }.build(), t)
+                        callback.onFailure(res, t)
                     }
                 }
             })
@@ -64,6 +61,6 @@ class FrontDeskAdapterFactory(private val executor: Executor): FrontDeskAdapter.
             this.isCancel = true
         }
 
-        override fun clone(): FrontDesk<R> = FrontDeskCaller<R>(executor, frontDesk)
+        override fun clone(): FrontDesk<R> = FrontDeskCaller(executor, frontDesk)
     }
 }

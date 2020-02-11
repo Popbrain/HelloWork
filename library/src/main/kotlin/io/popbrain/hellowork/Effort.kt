@@ -31,7 +31,7 @@ class Effort<out T> private constructor(builder: Builder<T>) {
         this.status = builder.status
         this.message = builder.message
         this.error = builder.error
-        this.isError = this.error != null && (status == Status.COMPLETE || status == Status.CANCELED)
+        this.isError = this.error != null && status is Status.Error
     }
 
     fun get(): T? = this.result

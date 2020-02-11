@@ -17,8 +17,18 @@ project.sourceSets {
 }
 
 dependencies {
-    implementation(fileTree(mapOf("dir" to "libs", "include" to arrayOf("*.jar"))))
+//    implementation(fileTree(mapOf("dir" to "libs", "include" to arrayOf("*.jar"))))
+//    implementation(fileTree(mapOf("dir" to "libs", "include" to arrayOf("hellowork-*.jar"))))
+//    implementation(fileTree(mapOf("dir" to "libs", "include" to arrayOf("sdkA-*.jar"))))
+//    implementation(fileTree(mapOf("dir" to "libs", "include" to arrayOf("sdkB-*.jar"))))
     implementation(kotlin("stdlib-jdk8"))
+
+    val versions: Map<String, String> by project
+    implementation("""org.jetbrains.kotlin:kotlin-reflect:${versions["kotlin"]}""")
+
+    implementation(project(":library"))
+    implementation(project(":Sample:sdkA"))
+    implementation(project(":Sample:sdkB"))
 }
 
 configure<JavaPluginConvention> {

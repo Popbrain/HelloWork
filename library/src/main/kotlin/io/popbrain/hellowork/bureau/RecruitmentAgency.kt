@@ -111,35 +111,45 @@ class RecruitmentAgency(private val workerAddressList: Array<String>) {
         if (classLoader == null) return null
 
         val rootPackageName = target.replace(PACKAGE_SEPARATOR, File.separator)
-        System.out.println("""Root Package Name : ${rootPackageName}""")
-        val urls = classLoader.getResources(rootPackageName)
+        Log.out.v("""Find Package Name : ${rootPackageName}""")
+        return findByPackage(classLoader, rootPackageName)
+    }
 
+    private fun findByPackage(classLoader: ClassLoader, rootPackageName: String): Array<String> {
+        val urls = classLoader.getResources(rootPackageName)
         val classNameList = ArrayList<String>()
         while (urls.hasMoreElements()) {
             val rootUrl = urls.nextElement()
-            System.out.println("""Root URL : ${rootUrl.toURI().toString()}""")
-            System.out.println("""URL Protcol : ${rootUrl.protocol}""")
-            when(rootUrl.protocol) {
-                "file" -> findFromFile(rootPackageName, rootUrl)
-                "jar" -> findFromJar(rootPackageName, rootUrl)
-                else -> null
-            }.run {
-                this?.let {
-                    classNameList.addAll(it)
-                }
+            findByUrl(rootPackageName, rootUrl)?.let {
+                classNameList.addAll(it)
             }
         }
-        return if (0 < classNameList.size) classNameList.toTypedArray() else null
+        return classNameList.toTypedArray()
+    }
+
+    private fun findByUrl(rootPackageName: String, rootUrl: URL): Array<String>? {
+        return when (rootUrl.protocol) {
+            "file" -> {
+                Log.out.v("""Search File Path : ${rootUrl.toURI()}""")
+                findFromFile(rootPackageName, rootUrl)
+            }
+            "jar" -> {
+                Log.out.v("""Search Jar's Path : ${rootUrl.toURI()}""")
+                findFromJar(rootPackageName, rootUrl)
+            }
+            else -> null
+        }
     }
 
     private fun findFromJar(rootPackageName: String, rootUrl: URL): Array<String>? {
-        System.out.println("""findFromJar""")
         try {
             var classNameList: Array<String>? = null
             val jarUrlConnection = rootUrl.openConnection() as JarURLConnection
             val jarEnum = jarUrlConnection.jarFile.entries()
             while (jarEnum.hasMoreElements()) {
-                getClassCanonicalName(jarEnum.nextElement().name, rootPackageName).run {
+                val fileName = jarEnum.nextElement().name
+                Log.out.v("   Searching in jar : $fileName")
+                getClassCanonicalName(fileName, rootPackageName).run {
                     this?.let { classFullName ->
                         classNameList = classListFactory(classFullName)
                     }
@@ -154,38 +164,44 @@ class RecruitmentAgency(private val workerAddressList: Array<String>) {
     private fun findFromFile(rootPackageName: String, rootUrl: URL): Array<String>? {
         var classNameList: Array<String>? = null
         val rootPath = Paths.get(rootUrl.toURI())
-        Files.walkFileTree(rootPath, object : FileVisitor<Path> {
-            override fun visitFile(file: Path?, attrs: BasicFileAttributes?): FileVisitResult {
-                file?.let { path ->
-                    getClassCanonicalName(path.toString(), rootPackageName).run {
-                        this?.let { classFullName ->
-                            classNameList = classListFactory(classFullName)
+        try {
+            Files.walkFileTree(rootPath, object : FileVisitor<Path> {
+                override fun visitFile(file: Path?, attrs: BasicFileAttributes?): FileVisitResult {
+                    file?.let { path ->
+                        Log.out.v("   Searching file : $path")
+                        getClassCanonicalName(path.toString(), rootPackageName).run {
+                            this?.let { classFullName ->
+                                classNameList = classListFactory(classFullName)
+                            }
                         }
                     }
+                    Objects.requireNonNull(file)
+                    Objects.requireNonNull<BasicFileAttributes>(attrs)
+                    return FileVisitResult.CONTINUE
                 }
-                Objects.requireNonNull(file)
-                Objects.requireNonNull<BasicFileAttributes>(attrs)
-                return FileVisitResult.CONTINUE
-            }
 
-            override fun postVisitDirectory(dir: Path?, exc: IOException?): FileVisitResult {
-                Objects.requireNonNull(dir)
-                if (exc != null) throw exc
-                return FileVisitResult.CONTINUE
-            }
+                override fun postVisitDirectory(dir: Path?, exc: IOException?): FileVisitResult {
+                    Objects.requireNonNull(dir)
+                    if (exc != null) throw exc
+                    return FileVisitResult.CONTINUE
+                }
 
-            override fun visitFileFailed(file: Path?, exc: IOException?): FileVisitResult {
-                Objects.requireNonNull(file)
-                throw exc!!
-            }
+                override fun visitFileFailed(file: Path?, exc: IOException?): FileVisitResult {
+                    Objects.requireNonNull(file)
+                    throw exc!!
+                }
 
-            override fun preVisitDirectory(dir: Path?, attrs: BasicFileAttributes?): FileVisitResult {
-                Objects.requireNonNull(dir)
-                Objects.requireNonNull<BasicFileAttributes>(attrs)
-                return FileVisitResult.CONTINUE
-            }
-        })
-        return classNameList
+                override fun preVisitDirectory(dir: Path?, attrs: BasicFileAttributes?): FileVisitResult {
+                    Objects.requireNonNull(dir)
+                    Objects.requireNonNull<BasicFileAttributes>(attrs)
+                    return FileVisitResult.CONTINUE
+                }
+            })
+            return classNameList
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return null
     }
 
     private fun getClassCanonicalName(path: String, rootPackageName: String): String? {

@@ -1,11 +1,3 @@
-//plugins {
-//    java
-//    kotlin("jvm") version "1.3.61"
-//}
-
-//group = "io.popbrain"
-//version = "1.0-SNAPSHOT"
-
 buildscript {
     val versions by extra { mapOf(
         "kotlin"  to "1.3.61"
@@ -16,7 +8,6 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-//        classpath("com.android.tools.build", "gradle", "3.5.2")
         classpath("""org.jetbrains.kotlin:kotlin-gradle-plugin:${versions["kotlin"]}""")
         classpath("org.jetbrains.kotlin:kotlin-stdlib")
     }

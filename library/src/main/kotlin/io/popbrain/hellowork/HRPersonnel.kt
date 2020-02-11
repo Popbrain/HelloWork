@@ -16,6 +16,7 @@
 package io.popbrain.hellowork
 
 import io.popbrain.hellowork.exception.SuspendHelloWorkException
+import java.io.IOException
 import java.util.concurrent.ExecutorService
 
 /**
@@ -40,19 +41,19 @@ class HRPersonnel<R>(
     override fun execute(): Effort<R> {
 
         if (isCanceled) {
-            return createErrorEffort(Status.CANCELED,"Canceled")
+            return createErrorEffort(Status.CANCELED, "It was canceled it.")
         }
         try {
             args?.let {
-                val result = workerJob.execute(*it) as R
-                return createSuccessEffort(result, "Complete a task.")
+                val result = workerJob.execute(*it)
+                return createSuccessEffort(result, "Completed a task.")
             }
-            val result = workerJob.execute() as R
-            return createSuccessEffort(result, "Complete a task.")
+            val result = workerJob.execute()
+            return createSuccessEffort(result, "Completed a task.")
         } catch (e: SuspendHelloWorkException) {
-            return createErrorEffort(e.error,"", e)
+            return createErrorEffort(e.error, e.message, e)
         } catch (e: Exception) {
-            return createErrorEffort(Status.Error.OTHER,"Failed", e)
+            return createErrorEffort(Status.Error.OTHER, "Failed execute job. Make sure the details of Exception.", e)
         }
     }
 

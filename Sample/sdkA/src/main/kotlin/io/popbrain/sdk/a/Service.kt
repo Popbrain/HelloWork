@@ -81,6 +81,7 @@ class Service {
 
                 override fun onFailure(res: Effort<Boolean>, error: Throwable?) {
                     System.out.println("WTF : ${res.isError}")
+                    System.out.println("WTF reason : ${res.message}")
                 }
             })
     }
