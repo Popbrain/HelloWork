@@ -15,9 +15,6 @@
  */
 package io.popbrain.hellowork.annotation.employer
 
-import java.lang.annotation.ElementType
-import java.lang.annotation.Target
-
-@Target(ElementType.METHOD)
+@kotlin.annotation.Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class JobOffer(val value: String = "")

@@ -15,12 +15,9 @@
  */
 package io.popbrain.hellowork.annotation
 
-import java.lang.annotation.ElementType
-import java.lang.annotation.Target
-
 /**
  * HelloWork
  */
-@Target(ElementType.TYPE)
+@kotlin.annotation.Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class HelloWork(vararg val value: String)

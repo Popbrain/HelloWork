@@ -1,8 +1,8 @@
 package io.popbrain.sdk.a.api
 
 import io.popbrain.hellowork.FrontDesk
-import io.popbrain.hellowork.annotation.HelloWork
 import io.popbrain.hellowork.Job
+import io.popbrain.hellowork.annotation.HelloWork
 import io.popbrain.hellowork.annotation.employer.JobOffer
 
 /**

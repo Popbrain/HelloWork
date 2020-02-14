@@ -106,6 +106,7 @@ open class Env private constructor() {
         }
         return Project.JavaDefault
     }
+    open fun isAndroid(): Boolean = false
     open fun defaultCallbackExecutor(): Executor = Project.JavaDefault.defaultCallbackExecutor()
     open fun isDefaultMethod(method: Method): Boolean = method.isDefault
     open fun defaultFrontDeskAdapterFactory(callbackExecutor: Executor?): FrontDeskAdapter.Factory {
@@ -118,6 +119,7 @@ open class Env private constructor() {
     sealed class Project : Env() {
 
         object JavaDefault : Project() {
+            override fun isAndroid(): Boolean = false
             override fun defaultCallbackExecutor(): Executor = DefaultExecutor()
             private class DefaultExecutor : Executor {
                 override fun execute(command: Runnable) {
@@ -127,6 +129,7 @@ open class Env private constructor() {
         }
 
         object Android : Project() {
+            override fun isAndroid(): Boolean = true
             override fun defaultCallbackExecutor(): Executor = MainThreadExecutor()
             private class MainThreadExecutor : Executor {
                 private val handler = Handler(Looper.getMainLooper())

@@ -19,7 +19,7 @@ interface FrontDesk<T>: Cloneable {
 
     fun execute(): Effort<T>
 
-    fun enqueue(callback: Callback<T>)
+    fun enqueue(callback: Callback<T>? = null)
 
     fun cancel()
 

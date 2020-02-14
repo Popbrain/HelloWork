@@ -15,8 +15,7 @@
  */
 package io.popbrain.hellowork.annotation.employee
 
-import java.lang.annotation.ElementType
-import java.lang.annotation.Target
 
-@Target(ElementType.TYPE)
+@kotlin.annotation.Target(AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.RUNTIME)
 annotation class Worker()
