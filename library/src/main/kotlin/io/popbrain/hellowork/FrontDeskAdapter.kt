@@ -15,7 +15,6 @@
  */
 package io.popbrain.hellowork
 
-import io.popbrain.hellowork.util.getFrontDeskResponseType
 import io.popbrain.hellowork.util.getParameterUpperBound
 import io.popbrain.hellowork.util.rawType
 import java.lang.reflect.ParameterizedType

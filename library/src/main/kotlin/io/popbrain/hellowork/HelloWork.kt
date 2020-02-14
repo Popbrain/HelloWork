@@ -15,6 +15,7 @@
  */
 package io.popbrain.hellowork
 
+import android.content.Context
 import io.popbrain.hellowork.annotation.employee.Worker
 import io.popbrain.hellowork.bureau.RecruitmentAgency
 import io.popbrain.hellowork.bureau.WorkerSorting
@@ -175,7 +176,9 @@ class HelloWork private constructor(builder: Dispatcher) {
     class Bureau<T : Job>(private vararg val jobs: Class<T>) {
 
         private val workerAddressList = ArrayList<String>()
+        private val isAndroid: Boolean = Env.instance().isAndroid()
         private var executorService: ExecutorService? = null
+
         fun addRequest(vararg packageName: String): Bureau<*> {
             this.workerAddressList.addAll(packageName)
             return this
@@ -195,11 +198,27 @@ class HelloWork private constructor(builder: Dispatcher) {
          * Request for search the worker.
          */
         fun entry(): FrontDesk<Array<String>> {
+            if (isAndroid) {
+                throw SuspendHelloWorkException(Status.Error.FATAL, "This environment is Android. Please call entry(context)")
+            }
             jobs.forEach {
                 workerAddressList.addAll(it.getWorkerAddress())
             }
             val agency = RecruitmentAgency(workerAddressList.toTypedArray()).apply {
-//                filterByAnnotation(io.popbrain.hellowork.annotation.HelloWork::class.java, Worker::class.java)
+                filterByAnnotation(Worker::class.java, io.popbrain.hellowork.annotation.employee.Job::class.java)
+                callResponseHandler(WorkerSorting())
+            }
+            return RecruitmentStaff(agency, this.executorService)
+        }
+
+        fun entry(context: Context): FrontDesk<Array<String>> {
+            if (!isAndroid) {
+                throw SuspendHelloWorkException(Status.Error.FATAL, "This environment is not Android. Please call entry()")
+            }
+            jobs.forEach {
+                workerAddressList.addAll(it.getWorkerAddress())
+            }
+            val agency = RecruitmentAgency(context, workerAddressList.toTypedArray()).apply {
                 filterByAnnotation(Worker::class.java, io.popbrain.hellowork.annotation.employee.Job::class.java)
                 callResponseHandler(WorkerSorting())
             }

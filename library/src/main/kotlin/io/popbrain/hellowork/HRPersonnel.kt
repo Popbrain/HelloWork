@@ -16,7 +16,6 @@
 package io.popbrain.hellowork
 
 import io.popbrain.hellowork.exception.SuspendHelloWorkException
-import java.io.IOException
 import java.util.concurrent.ExecutorService
 
 /**
@@ -57,13 +56,13 @@ class HRPersonnel<R>(
         }
     }
 
-    override fun enqueue(callback: Callback<R>) {
+    override fun enqueue(callback: Callback<R>?) {
         enqueue {
             val effort = execute()
             if (!effort.isError) {
-                callback.onResponse(this, effort)
+                callback?.onResponse(this, effort)
             } else {
-                callback.onFailure(effort, effort.error)
+                callback?.onFailure(effort, effort.error)
             }
         }
     }

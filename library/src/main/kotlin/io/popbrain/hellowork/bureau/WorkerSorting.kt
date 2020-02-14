@@ -16,19 +16,20 @@
 package io.popbrain.hellowork.bureau
 
 import io.popbrain.hellowork.HelloWork
-import io.popbrain.hellowork.Status
 import io.popbrain.hellowork.annotation.employee.Job
-import io.popbrain.hellowork.exception.SuspendHelloWorkException
+import io.popbrain.hellowork.util.Log
 
 class WorkerSorting: RecruitmentAgency.CallReponseHandler {
 
-    override fun onSort(classPackage: String, resultClass: Class<*>): Boolean {
+    override fun isTarget(classPackage: String, resultClass: Class<*>): Boolean {
         resultClass.declaredMethods.forEach { method ->
             method.getAnnotationsByType(Job::class.java).forEach {
                 if (!HelloWork.WaitingRoom.isExistWorker(it.value)) {
+                    Log.out.v("Found worker's job : ${it.value}")
                     HelloWork.WaitingRoom.passingWorker(it.value, io.popbrain.hellowork.Worker(resultClass, method))
                 } else {
-                    throw SuspendHelloWorkException(Status.Error.WORKERS_TROUBLE, """JobName "${it.value}" is duplicated!! Please check multiple definition.""")
+//                    throw SuspendHelloWorkException(Status.Error.WORKERS_TROUBLE, """JobName "${it.value}" is duplicated!! Please check multiple definition.""")
+                    Log.out.e("""JobName "${it.value}" is duplicated!! Please check multiple definition.""")
                 }
             }
 

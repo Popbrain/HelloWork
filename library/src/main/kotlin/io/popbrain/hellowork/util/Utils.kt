@@ -201,16 +201,11 @@ open class SingletonHolder<out T>(private var creator: (() -> T)) {
 enum class Log {
     out;
 
-    private val isLoggable: Boolean
-    private val isAndroid: Boolean
-
-    init {
-        val env = Env.instance()
-        this.isLoggable = env.isVerboseEnable
-        this.isAndroid = (Env.instance() == Env.Project.Android)
-    }
+    private val isLoggable: Boolean = Env.instance().isVerboseEnable
+    private val isAndroid: Boolean = Env.instance().isAndroid()
 
     fun v(message: String) {
+        if (!isLoggable) return
         if (isAndroid) {
             Log.v(TAG, message)
         } else {
@@ -220,6 +215,7 @@ enum class Log {
     }
 
     fun e(message: String, t: Throwable? = null) {
+        if (!isLoggable) return
         if (isAndroid) {
             Log.e(TAG, message, t)
         } else {

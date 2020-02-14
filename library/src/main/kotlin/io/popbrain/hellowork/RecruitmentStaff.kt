@@ -32,6 +32,9 @@ class RecruitmentStaff(private val agency: RecruitmentAgency,
         try {
             val result = agency.execute()
             result?.let {
+                it.forEach {
+                    Log.out.v("Recruited worker class : ${it}")
+                }
                 HelloWork.WaitingRoom.saveWorkerList(it)
             }
             return createSuccessEffort(result, """Completed find worker.""")
@@ -43,15 +46,15 @@ class RecruitmentStaff(private val agency: RecruitmentAgency,
         }
     }
 
-    override fun enqueue(callback: Callback<Array<String>>) {
+    override fun enqueue(callback: Callback<Array<String>>?) {
         var executor = Env.instance().defaultCallbackExecutor()
         enqueue {
             val effort = execute()
             executor.execute {
                 if (!effort.isError) {
-                    callback.onResponse(this, effort)
+                    callback?.onResponse(this, effort)
                 } else {
-                    callback.onFailure(effort, effort.error)
+                    callback?.onFailure(effort, effort.error)
                 }
             }
         }

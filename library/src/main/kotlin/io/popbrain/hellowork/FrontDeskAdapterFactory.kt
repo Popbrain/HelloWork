@@ -17,7 +17,6 @@ package io.popbrain.hellowork
 
 import io.popbrain.hellowork.util.equalRawType
 import io.popbrain.hellowork.util.getFrontDeskResponseType
-import java.io.IOException
 import java.lang.reflect.Type
 import java.util.concurrent.Executor
 
@@ -37,21 +36,21 @@ class FrontDeskAdapterFactory(private val executor: Executor): FrontDeskAdapter.
         private var isCancel = false
         override fun execute(): Effort<R> = frontDesk.execute()
 
-        override fun enqueue(callback: Callback<R>) {
+        override fun enqueue(callback: Callback<R>?) {
             frontDesk.enqueue(object: Callback<R> {
                 override fun onResponse(call: FrontDesk<R>?, res: Effort<R>) {
                     this@FrontDeskCaller.executor.execute {
                         if (isCancel) {
-                            callback.onFailure(res)
+                            callback?.onFailure(res)
                         } else {
-                            callback.onResponse(this@FrontDeskCaller, res)
+                            callback?.onResponse(this@FrontDeskCaller, res)
                         }
                     }
                 }
 
                 override fun onFailure(res: Effort<R>, t: Throwable?) {
                     this@FrontDeskCaller.executor.execute {
-                        callback.onFailure(res, t)
+                        callback?.onFailure(res, t)
                     }
                 }
             })

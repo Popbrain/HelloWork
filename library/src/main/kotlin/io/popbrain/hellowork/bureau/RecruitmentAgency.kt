@@ -15,6 +15,9 @@
  */
 package io.popbrain.hellowork.bureau
 
+import android.content.Context
+import dalvik.system.PathClassLoader
+import io.popbrain.hellowork.Env
 import io.popbrain.hellowork.util.Log
 import io.popbrain.hellowork.util.deepEqual
 import io.popbrain.hellowork.util.equalJavaObjectType
@@ -22,7 +25,6 @@ import io.popbrain.hellowork.util.getAllAnnotations
 import io.popbrain.hellowork.util.isStringContain
 import java.io.File
 import java.io.IOException
-import java.lang.ref.WeakReference
 import java.net.JarURLConnection
 import java.net.URL
 import java.nio.file.FileVisitResult
@@ -37,14 +39,30 @@ import kotlin.collections.ArrayList
 /**
  * Find workers class
  */
-class RecruitmentAgency(private val workerAddressList: Array<String>) {
+class RecruitmentAgency {
 
     private val PACKAGE_SEPARATOR = "."
     private val CLASS_SUFFIX = ".class"
-    private val classLoader: WeakReference<ClassLoader> = WeakReference(ClassLoader.getSystemClassLoader())
+    private val workerAddressList: Array<String>
+    private val classLoader: ClassLoader
     private var filterAnnotationClasses: Array<Class<out Annotation>>? = null
     private var filterStrings: Array<String>? = null
     private var callReponseHandler: CallReponseHandler? = null
+    private val isAndroid = Env.instance().isAndroid()
+    private val packageCodePath: String
+
+    constructor(workerAddressList: Array<String>) {
+        this.classLoader = this@RecruitmentAgency.javaClass.classLoader
+        this.workerAddressList = workerAddressList
+        this.packageCodePath = ""
+    }
+
+    constructor(context: Context, workerAddressList: Array<String>) {
+        this.classLoader = context.classLoader
+        this.workerAddressList = workerAddressList
+        this.packageCodePath = context.packageCodePath
+    }
+
 
     /**
      * Add annotations to filter
@@ -92,6 +110,7 @@ class RecruitmentAgency(private val workerAddressList: Array<String>) {
 
     private fun findAll(): Array<String> {
         val classNameList = ArrayList<String>()
+        Log.out.v("workderAddressList size : ${workerAddressList.size}")
         workerAddressList.forEach {
             find(it)?.let {
                 classNameList.addAll(it)
@@ -104,27 +123,70 @@ class RecruitmentAgency(private val workerAddressList: Array<String>) {
      * Find target class
      */
     private fun find(target: String): Array<String>? {
-        classListFactory(target).run {
-            if (0 < size) return this
+        if (isAndroid) {
+            Log.out.v("run on Android Environment")
+            Log.out.v("""Target package name : $target""")
+            findFromAndroidPackage(target)?.let {
+                return arrayOf(it)
+            }
+            return null
         }
-        val classLoader = classLoader.get()
-        if (classLoader == null) return null
-
-        val rootPackageName = target.replace(PACKAGE_SEPARATOR, File.separator)
-        Log.out.v("""Find Package Name : ${rootPackageName}""")
-        return findByPackage(classLoader, rootPackageName)
+        Log.out.v("run on Java Environment")
+        return findFromJavaPackage(target)
     }
 
-    private fun findByPackage(classLoader: ClassLoader, rootPackageName: String): Array<String> {
-        val urls = classLoader.getResources(rootPackageName)
-        val classNameList = ArrayList<String>()
-        while (urls.hasMoreElements()) {
-            val rootUrl = urls.nextElement()
-            findByUrl(rootPackageName, rootUrl)?.let {
-                classNameList.addAll(it)
+    private fun findFromAndroidPackage(packageName: String): String? {
+        var classname: String? = null
+        try {
+            val loader = PathClassLoader(packageCodePath, classLoader)
+            val loadClass = loader.loadClass(packageName)
+            if (!isFilterEnable()) {
+                return if (isTarget(packageName, loadClass)) packageName else null
             }
+            doFiltering(loadClass) { res, klass ->
+                if (res && klass != null) {
+                    if (callReponseHandler != null) {
+                        if (callReponseHandler!!.isTarget(packageName, klass)) {
+                            classname = packageName
+                        }
+                    } else {
+                        classname = packageName
+                    }
+                }
+            }
+            return classname
+        } catch (e: ClassNotFoundException) {
+            getClass(packageName)?.let {
+                return if (isTarget(packageName, it)) packageName else null
+            }
+            Log.out.e("Could not found a class $packageName. In case of android must be assign full path of Class to arg of @HelloWork.")
+        } catch (e: java.lang.Exception) {
+            Log.out.e("Failed to find Android package.", e)
         }
-        return classNameList.toTypedArray()
+        return null
+    }
+
+    private fun findFromJavaPackage(target: String): Array<String>? {
+        if (isAvailable(target)) {
+            return arrayOf(target)
+        }
+        try {
+            val packageName = target.replace(PACKAGE_SEPARATOR, File.separator)
+            Log.out.v("""Find Package Name : $packageName""")
+            if (classLoader == null) return null
+            val urls = classLoader.getResources(packageName)
+            val classNameList = ArrayList<String>()
+            while (urls.hasMoreElements()) {
+                val rootUrl = urls.nextElement()
+                findByUrl(packageName, rootUrl)?.let {
+                    classNameList.addAll(it)
+                }
+            }
+            return classNameList.toTypedArray()
+        } catch (e: java.lang.Exception) {
+            Log.out.e("Failed to find Java package.", e)
+        }
+        return null
     }
 
     private fun findByUrl(rootPackageName: String, rootUrl: URL): Array<String>? {
@@ -143,7 +205,7 @@ class RecruitmentAgency(private val workerAddressList: Array<String>) {
 
     private fun findFromJar(rootPackageName: String, rootUrl: URL): Array<String>? {
         try {
-            var classNameList: Array<String>? = null
+            val classNameList = ArrayList<String>()
             val jarUrlConnection = rootUrl.openConnection() as JarURLConnection
             val jarEnum = jarUrlConnection.jarFile.entries()
             while (jarEnum.hasMoreElements()) {
@@ -151,18 +213,20 @@ class RecruitmentAgency(private val workerAddressList: Array<String>) {
                 Log.out.v("   Searching in jar : $fileName")
                 getClassCanonicalName(fileName, rootPackageName).run {
                     this?.let { classFullName ->
-                        classNameList = classListFactory(classFullName)
+                        if (isAvailable(classFullName)) {
+                            classNameList.add(classFullName)
+                        }
                     }
                 }
             }
-            return classNameList
+            return classNameList.toTypedArray()
         } catch (e: Exception) {
             return null
         }
     }
 
     private fun findFromFile(rootPackageName: String, rootUrl: URL): Array<String>? {
-        var classNameList: Array<String>? = null
+        val classNameList = ArrayList<String>()
         val rootPath = Paths.get(rootUrl.toURI())
         try {
             Files.walkFileTree(rootPath, object : FileVisitor<Path> {
@@ -171,7 +235,9 @@ class RecruitmentAgency(private val workerAddressList: Array<String>) {
                         Log.out.v("   Searching file : $path")
                         getClassCanonicalName(path.toString(), rootPackageName).run {
                             this?.let { classFullName ->
-                                classNameList = classListFactory(classFullName)
+                                if (isAvailable(classFullName)) {
+                                    classNameList.add(classFullName)
+                                }
                             }
                         }
                     }
@@ -197,7 +263,7 @@ class RecruitmentAgency(private val workerAddressList: Array<String>) {
                     return FileVisitResult.CONTINUE
                 }
             })
-            return classNameList
+            return classNameList.toTypedArray()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -214,34 +280,55 @@ class RecruitmentAgency(private val workerAddressList: Array<String>) {
         return null
     }
 
-    private fun classListFactory(packageName: String): Array<String> {
-        val classNameList = ArrayList<String>()
+    /**
+     * Java
+     */
+    private fun isAvailable(packageName: String): Boolean {
+        var isValid = false
         if (isFilterEnable()) {
             doFiltering(packageName) { res, klass ->
                 if (res && klass != null) {
-                    if (callReponseHandler != null) {
-                        if (callReponseHandler!!.onSort(packageName, klass)) {
-                            classNameList.add(packageName)
-                        }
-                    } else {
-                        classNameList.add(packageName)
-                    }
+                    isValid = isTarget(packageName, klass)
                 }
             }
         } else {
             try {
-                Class.forName(packageName)
-                classNameList.add(packageName)
+                getClass(packageName, classLoader)?.let {
+                    isValid = isTarget(packageName, it)
+                }
             } catch (e: Exception) {
             }
         }
-        return classNameList.toTypedArray()
+        return isValid
+    }
+
+    /**
+     * Java / Android
+     */
+    private fun isTarget(packageName: String, klass: Class<*>): Boolean {
+        if (callReponseHandler == null) return true
+        return callReponseHandler!!.isTarget(packageName, klass)
     }
 
     private fun doFiltering(classPackage: String, onResult: (Boolean, Class<*>?) -> Unit) {
-        if (classPackage.isNullOrEmpty() || !isFilterEnable()) onResult.invoke(false, null)
+        if (classPackage.isNullOrEmpty()) onResult.invoke(false, null)
         try {
-            val klass = Class.forName(classPackage)
+            getClass(classPackage)?.let {
+                doFiltering(it, onResult)
+                return
+            }
+        } catch (e: java.lang.Exception) {
+            Log.out.e("""Occurred error.""", e)
+        }
+        onResult.invoke(false, null)
+    }
+
+    /**
+     * Android
+     */
+    private fun doFiltering(klass: Class<*>, onResult: (Boolean, Class<*>?) -> Unit) {
+        if (klass == null) onResult.invoke(false, null)
+        try {
             val annotations = klass.getAllAnnotations()
             if (annotations.size == 0) onResult.invoke(false, null)
             var result = 0
@@ -284,9 +371,22 @@ class RecruitmentAgency(private val workerAddressList: Array<String>) {
         return result
     }
 
+    private fun getClass(className: String, loader: ClassLoader? = null): Class<*>? {
+        try {
+            if (loader == null) {
+                return javaClass.classLoader.loadClass(className)
+            } else {
+                return loader.loadClass(className)
+            }
+        } catch (e: Exception) {
+            Log.out.e("Could not get class.", e)
+        }
+        return null
+    }
+
     interface CallReponseHandler {
 
-        fun onSort(classPackage: String, resultClass: Class<*>): Boolean
+        fun isTarget(classPackage: String, resultClass: Class<*>): Boolean
 
     }
 

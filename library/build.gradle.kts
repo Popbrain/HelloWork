@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.konan.properties.loadProperties
-
 group = "com.github.popbrain"
 version = "0.2.0"
 val artifactId = "hellowork"
