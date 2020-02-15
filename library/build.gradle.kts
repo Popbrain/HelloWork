@@ -1,5 +1,5 @@
 group = "com.github.popbrain"
-version = "0.2.0"
+version = "1.0.0"
 val artifactId = "hellowork"
 
 plugins {
@@ -70,10 +70,6 @@ publishing {
                 name.set("Hello Work")
                 description.set("Hellowork is for Java and Android what can call modules from a module without the reflection implementation.")
                 url.set("https://github.com/Popbrain/HelloWork")
-//                properties.set(mapOf(
-//                    "myProp" to "value",
-//                    "prop.with.dots" to "anotherValue"
-//                ))
                 licenses {
                     license {
                         name.set("The Apache License, Version 2.0")
