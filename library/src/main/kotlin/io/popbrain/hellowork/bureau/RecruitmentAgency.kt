@@ -18,6 +18,7 @@ package io.popbrain.hellowork.bureau
 import android.content.Context
 import dalvik.system.PathClassLoader
 import io.popbrain.hellowork.Env
+import io.popbrain.hellowork.util.ClassScanner
 import io.popbrain.hellowork.util.Log
 import io.popbrain.hellowork.util.deepEqual
 import io.popbrain.hellowork.util.equalJavaObjectType
@@ -50,6 +51,7 @@ class RecruitmentAgency {
     private var callReponseHandler: CallReponseHandler? = null
     private val isAndroid = Env.instance().isAndroid()
     private val packageCodePath: String
+    private var androidClassFinder: AndroidClassFinder? = null
 
     constructor(workerAddressList: Array<String>) {
         this.classLoader = this@RecruitmentAgency.javaClass.classLoader
@@ -61,6 +63,7 @@ class RecruitmentAgency {
         this.classLoader = context.classLoader
         this.workerAddressList = workerAddressList
         this.packageCodePath = context.packageCodePath
+        this.androidClassFinder = AndroidClassFinder(context.applicationContext)
     }
 
 
@@ -136,34 +139,42 @@ class RecruitmentAgency {
     }
 
     private fun findFromAndroidPackage(packageName: String): String? {
-        var classname: String? = null
+        var className: String? = null
         try {
             val loader = PathClassLoader(packageCodePath, classLoader)
-            val loadClass = loader.loadClass(packageName)
+            val loadedClass = loader.loadClass(packageName)
             if (!isFilterEnable()) {
-                return if (isTarget(packageName, loadClass)) packageName else null
+                return if (isTarget(packageName, loadedClass)) packageName else null
             }
-            doFiltering(loadClass) { res, klass ->
+            doFiltering(loadedClass) { res, klass ->
                 if (res && klass != null) {
-                    if (callReponseHandler != null) {
-                        if (callReponseHandler!!.isTarget(packageName, klass)) {
-                            classname = packageName
-                        }
+                    if (callReponseHandler != null &&
+                        callReponseHandler!!.isTarget(packageName, klass)) {
+                        className = packageName
                     } else {
-                        classname = packageName
+                        className = packageName
                     }
                 }
             }
-            return classname
+            return className
         } catch (e: ClassNotFoundException) {
             getClass(packageName)?.let {
                 return if (isTarget(packageName, it)) packageName else null
             }
+            this.androidClassFinder?.let {
+                it.targetClass = packageName
+                it.scan { name, clazz ->
+                    className = name
+                }
+            }
+            if (!className.isNullOrEmpty()) return className
             Log.out.e("Could not found a class $packageName. In case of android must be assign full path of Class to arg of @HelloWork.")
         } catch (e: java.lang.Exception) {
             Log.out.e("Failed to find Android package.", e)
+        } finally {
+            this.androidClassFinder = null
         }
-        return null
+        return className
     }
 
     private fun findFromJavaPackage(target: String): Array<String>? {
@@ -382,6 +393,31 @@ class RecruitmentAgency {
             Log.out.e("Could not get class.", e)
         }
         return null
+    }
+
+    private inner class AndroidClassFinder(
+        context: Context
+    ) : ClassScanner(context) {
+        var targetClass: String = ""
+        override fun isTargetClassName(className: String): Boolean
+            = !targetClass.isNullOrEmpty() && className.startsWith(targetClass)
+        override fun isTargetClass(clazz: Class<*>): Boolean {
+            var result = false
+            doFiltering(clazz) { res, klass ->
+                if (res && klass != null) {
+                    if (callReponseHandler != null) {
+                        result = callReponseHandler!!.isTarget(targetClass, klass)
+                    } else {
+                        result = true
+                    }
+                }
+            }
+            return result
+        }
+
+        override fun onError(message: String, e: Exception) {
+            Log.out.e("AndroidClassFinder onError", e)
+        }
     }
 
     interface CallReponseHandler {

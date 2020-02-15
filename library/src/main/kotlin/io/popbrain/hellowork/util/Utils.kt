@@ -15,12 +15,18 @@
  */
 package io.popbrain.hellowork.util
 
+import android.content.Context
+import android.os.Build
 import android.util.Log
+import dalvik.system.BaseDexClassLoader
+import dalvik.system.DexFile
+import dalvik.system.PathClassLoader
 import io.popbrain.hellowork.Env
 import io.popbrain.hellowork.FrontDesk
 import io.popbrain.hellowork.Status
 import io.popbrain.hellowork.annotation.HelloWork
 import io.popbrain.hellowork.exception.SuspendHelloWorkException
+import java.lang.reflect.Field
 import java.lang.reflect.GenericArrayType
 import java.lang.reflect.Method
 import java.lang.reflect.ParameterizedType
@@ -62,7 +68,10 @@ fun Type.getFrontDeskResponseType(): Type {
     if (equalRawType<FrontDesk<*>>() && this is ParameterizedType) {
         return getParameterUpperBound(0)
     }
-    throw SuspendHelloWorkException(Status.Error.FATAL, "The return type of JobOffer method must be 'FrontDesk.class', if you use DefaultStaffAdaterFactory.")
+    throw SuspendHelloWorkException(
+        Status.Error.FATAL,
+        "The return type of JobOffer method must be 'FrontDesk.class', if you use DefaultStaffAdaterFactory."
+    )
 }
 
 fun Method.hasEqualParams(method: Method): Boolean {
@@ -70,7 +79,7 @@ fun Method.hasEqualParams(method: Method): Boolean {
     val bParamTypes = method.parameterTypes
     if (aParamTypes.size != bParamTypes.size) return false
     if (aParamTypes.size == 0 && bParamTypes.size == 0) return true
-    for (i in 0..aParamTypes.size-1) {
+    for (i in 0..aParamTypes.size - 1) {
         if (aParamTypes[i] != bParamTypes[i]) {
             return false
         }
@@ -99,7 +108,7 @@ fun Type.hasUnresolvableType(): Boolean {
 fun Method.printNameAndArgs(): String {
     val str = StringBuilder(declaringClass.canonicalName).append(".").append(name).append("(")
     val types = parameterTypes
-    for (i in 0..types.size-1) {
+    for (i in 0..types.size - 1) {
         if (i == 0) {
             str.append(types[i].canonicalName)
         } else {
@@ -121,7 +130,7 @@ fun Any?.checkNotNull(mes: String? = ""): Any {
     throw NullPointerException(mes)
 }
 
-fun <T: Annotation> Class<*>.getAnnotation(annotationClass: Class<T>): T {
+fun <T : Annotation> Class<*>.getAnnotation(annotationClass: Class<T>): T {
     return getAnnotationsByType(annotationClass)[0]
 }
 
@@ -180,7 +189,8 @@ fun Annotation.isStringContain(str: String): Boolean {
 }
 
 open class SingletonHolder<out T>(private var creator: (() -> T)) {
-    @Volatile private var instance: T? = null
+    @Volatile
+    private var instance: T? = null
 
     fun instance(): T {
         val i = instance
@@ -226,9 +236,108 @@ enum class Log {
             }
         }
     }
+
     companion object {
 
         private const val TAG = "[HelloWork]"
 
+    }
+}
+
+abstract class ClassScanner(private val mContext: Context) {
+
+    var isVerbose = false
+    protected abstract fun isTargetClassName(className: String): Boolean
+    open fun isTargetClass(clazz: Class<*>): Boolean = false
+    open fun onScanResult(className: String, clazz: Class<*>?) {}
+    open fun onError(message: String, e: Exception) {}
+
+    fun scan(): Array<Pair<String, Class<*>>> {
+        val classList = ArrayList<Pair<String, Class<*>>>()
+        scan { className, klass ->
+            classList.add(className to klass)
+        }
+        return classList.toTypedArray()
+    }
+
+    fun scan(onResult: (String, Class<*>) -> Unit) {
+        val timeBegin = System.currentTimeMillis()
+        try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+                scan15(onResult)
+            } else if (Build.VERSION_CODES.LOLLIPOP <= Build.VERSION.SDK_INT) {
+                scan21(onResult)
+            }
+        } catch (e: Exception) {
+            io.popbrain.hellowork.util.Log.out.e("Failed to scan", e)
+        }
+        val timeEnd = System.currentTimeMillis()
+        if (isVerbose)
+            io.popbrain.hellowork.util.Log.out.v("Scan time : ${timeEnd - timeBegin} ms")
+    }
+
+    private fun scan15(onResult: (String, Class<*>) -> Unit) {
+        val classLoader = mContext.classLoader as PathClassLoader
+        val classNames = DexFile(mContext.getPackageCodePath()).run {
+            entries()
+        }
+        while (classNames.hasMoreElements()) {
+            val className = classNames.nextElement()
+            if (isVerbose) io.popbrain.hellowork.util.Log.out.v("  found : $className")
+            inspect(classLoader, className, onResult)
+        }
+    }
+
+    private fun scan21(onResult: (String, Class<*>) -> Unit) {
+        io.popbrain.hellowork.util.Log.out.v("start scan21")
+        val classLoader = mContext.classLoader as BaseDexClassLoader
+        val pathList = field("dalvik.system.BaseDexClassLoader", "pathList").run {
+            get(classLoader) // Type is DexPathList
+        }
+        val dexElements = field("dalvik.system.DexPathList", "dexElements").run {
+            @Suppress("UNCHECKED_CAST")
+            get(pathList) as Array<Any> // Type is Array<DexPathList.Element>
+        }
+        val dexFileField = field("dalvik.system.DexPathList\$Element", "dexFile")
+        dexElements
+            .map {
+                dexFileField.get(it) as DexFile
+            }
+            .forEach {
+                val entry = it.entries()
+                while (entry.hasMoreElements()) {
+                    val className = entry.nextElement()
+                    if (isVerbose) io.popbrain.hellowork.util.Log.out.v("  found : $className")
+                    inspect(classLoader, className, onResult)
+                }
+            }
+    }
+
+    private fun inspect(
+        classLoader: ClassLoader,
+        className: String,
+        onResult: ((String, Class<*>) -> Unit)? = null
+    ) {
+        if (isTargetClassName(className)) {
+            try {
+                val klass =
+                    classLoader.loadClass(className)
+                if (isTargetClass(klass)) {
+                    onResult?.invoke(className, klass)
+                    onScanResult(className, klass)
+                }
+            } catch (e: ClassNotFoundException) {
+                onError("", e)
+            } catch (e: java.lang.Exception) {
+                onError("", e)
+            }
+        }
+    }
+
+    private fun field(className: String, fieldName: String): Field {
+        val clazz = Class.forName(className)
+        val field = clazz.getDeclaredField(fieldName)
+        field.isAccessible = true
+        return field
     }
 }
