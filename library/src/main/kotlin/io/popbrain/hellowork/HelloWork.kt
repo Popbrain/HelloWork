@@ -105,9 +105,12 @@ class HelloWork private constructor(builder: Dispatcher) {
     private fun loadWorkerJob(jobOffer: Class<*>, job: Method): WorkerJob<Any, Any> {
         var workerJob = CachePool.instance().get<WorkerJob<Any, Any>>(jobOffer)
         if (workerJob != null) return workerJob
-        return WorkerJob.Builder<Any, Any>(this, jobOffer).offer(job).build().apply {
-            CachePool.instance().put(jobOffer, this)
-        }
+        return WorkerJob.Builder<Any, Any>(this, jobOffer)
+            .offer(job)
+            .build()
+            .apply {
+                CachePool.instance().put(jobOffer, this)
+            }
     }
 
     /**
