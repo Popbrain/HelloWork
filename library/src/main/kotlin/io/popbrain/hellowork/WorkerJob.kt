@@ -15,6 +15,7 @@
  */
 package io.popbrain.hellowork
 
+import io.popbrain.hellowork.annotation.employee.Job
 import io.popbrain.hellowork.annotation.employer.JobOffer
 import io.popbrain.hellowork.exception.SuspendHelloWorkException
 import io.popbrain.hellowork.util.hasEqualParams
@@ -123,11 +124,16 @@ class WorkerJob<R, out T>(builder: Builder<R, out T>) {
          * Get a job name from Method.
          */
         private fun getJobName(job: Method): String {
-            val jobOfferAnnos = job.getAnnotationsByType(JobOffer::class.java)
+            val jobOfferAnnos = job.annotations
+            var jobName = ""
             if (jobOfferAnnos.size == 0) {
                 throw SuspendHelloWorkException(Status.Error.FATAL, "A JobOffer annotation is not defined.")
             }
-            val jobName = jobOfferAnnos[0].value
+            jobOfferAnnos.forEach {
+                if (it is JobOffer && jobName.isEmpty()) {
+                    jobName = it.value
+                }
+            }
             if (jobName.isEmpty()) throw SuspendHelloWorkException(Status.Error.FATAL, """${job.name}'s jobName is blank!!""")
             return jobName
         }

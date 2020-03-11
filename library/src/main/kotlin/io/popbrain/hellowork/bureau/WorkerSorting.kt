@@ -23,16 +23,17 @@ class WorkerSorting: RecruitmentAgency.CallReponseHandler {
 
     override fun isTarget(classPackage: String, resultClass: Class<*>): Boolean {
         resultClass.declaredMethods.forEach { method ->
-            method.getAnnotationsByType(Job::class.java).forEach {
-                if (!HelloWork.WaitingRoom.isExistWorker(it.value)) {
-                    Log.out.v("Found worker's job : ${it.value}")
-                    HelloWork.WaitingRoom.passingWorker(it.value, io.popbrain.hellowork.Worker(resultClass, method))
-                } else {
+            method.annotations.forEach {
+                if (it is Job) {
+                    if (!HelloWork.WaitingRoom.isExistWorker(it.value)) {
+                        Log.out.v("Found worker's job : ${it.value}")
+                        HelloWork.WaitingRoom.passingWorker(it.value, io.popbrain.hellowork.Worker(resultClass, method))
+                    } else {
 //                    throw SuspendHelloWorkException(Status.Error.WORKERS_TROUBLE, """JobName "${it.value}" is duplicated!! Please check multiple definition.""")
-                    Log.out.e("""JobName "${it.value}" is duplicated!! Please check multiple definition.""")
+                        Log.out.e("""JobName "${it.value}" is duplicated!! Please check multiple definition.""")
+                    }
                 }
             }
-
         }
         return true
     }
