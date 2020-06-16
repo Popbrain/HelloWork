@@ -28,7 +28,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.github.popbrain:hellowork:1.0.1'
+    implementation 'com.github.popbrain:hellowork:1.0.2'
 }
 ```
 
