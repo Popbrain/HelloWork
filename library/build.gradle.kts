@@ -1,5 +1,5 @@
 group = "com.github.popbrain"
-version = "1.0.1"
+version = "1.0.2"
 val artifactId = "hellowork"
 
 plugins {

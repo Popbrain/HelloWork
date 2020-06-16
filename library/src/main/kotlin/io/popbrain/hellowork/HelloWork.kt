@@ -72,8 +72,12 @@ class HelloWork private constructor(builder: Dispatcher) {
                     )
                 }
                 // Not allows default method.
-                if (env.isDefaultMethod(job)) {
-                    throw SuspendHelloWorkException(Status.Error.FATAL, "HelloWork does not allow default method.")
+                try {
+                    if (env.isDefaultMethod(job)) {
+                        throw SuspendHelloWorkException(Status.Error.FATAL, "HelloWork does not allow default method.")
+                    }
+                } catch (e: NoSuchMethodError) {
+                    // It's OK.
                 }
                 val workerJob = loadWorkerJob(jobOffer, job)
                 val hrPerson = HRPersonnel(workerJob, jobResources).apply {
